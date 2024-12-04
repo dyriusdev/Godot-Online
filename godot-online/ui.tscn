@@ -1,0 +1,96 @@
+[gd_scene load_steps=2 format=3 uid="uid://1v3vkmvfe4lv"]
+
+[ext_resource type="Script" path="res://ui.gd" id="1_rg8h3"]
+
+[node name="UI" type="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_rg8h3")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+clip_contents = true
+layout_mode = 0
+offset_left = 8.0
+offset_top = 64.0
+offset_right = 316.0
+offset_bottom = 208.0
+metadata/_edit_group_ = true
+
+[node name="IpBox" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Ip" type="Label" parent="VBox/IpBox"]
+layout_mode = 2
+text = "Ip :"
+
+[node name="IpText" type="TextEdit" parent="VBox/IpBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NameBox" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Name" type="Label" parent="VBox/NameBox"]
+layout_mode = 2
+text = "Name :"
+
+[node name="NameText" type="TextEdit" parent="VBox/NameBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Connect" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Connect"
+
+[node name="Disconnect" type="Button" parent="VBox"]
+layout_mode = 2
+disabled = true
+text = "Disconnect"
+
+[node name="Chat" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -576.0
+offset_top = -648.0
+grow_horizontal = 0
+grow_vertical = 0
+metadata/_edit_lock_ = true
+
+[node name="VBox" type="VBoxContainer" parent="Chat"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Output" type="TextEdit" parent="Chat/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+editable = false
+
+[node name="Input" type="TextEdit" parent="Chat/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.1
+
+[node name="Host" type="Button" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 52.0
+offset_bottom = 39.0
+text = "Host"
+
+[connection signal="pressed" from="VBox/Connect" to="." method="_on_connect_pressed"]
+[connection signal="pressed" from="VBox/Disconnect" to="." method="_on_disconnect_pressed"]
+[connection signal="pressed" from="Host" to="." method="_on_host_pressed"]

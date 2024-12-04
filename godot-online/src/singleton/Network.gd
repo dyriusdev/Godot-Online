@@ -1,90 +1,80 @@
 extends Node
 
+signal client_connected(id, info)
+signal client_disconnected(id, nick)
+signal server_disconnected
+
 const DEFAULT_PORT : int = 8080
 const MAX_CLIENTS : int = 10
 
-@onready var client_connection_timeout : Timer = Timer.new()
+var peer : ENetMultiplayerPeer = null
 
-var server : ENetMultiplayerPeer = null
-var client : ENetMultiplayerPeer = null
-
-var ip_address : String = ""
-
-var is_client_connected_to_server : bool = false
-var networked_object_index : int = 0 :
-	set = _networked_object_index_set
-
-@rpc("any_peer")
-func peer_networked_object_index_set(value : int) -> void:
-	networked_object_index = value
-	pass
-
-func _networked_object_index_set(value : int) -> void:
-	networked_object_index = value
-	if get_tree().is_server():
-		rpc("peer_networked_object_index_set", networked_object_index)
-	pass
+var clients : Dictionary = {}
+var local_data : Dictionary = {"name" : "Host"}
+var clients_loaded : int = 0
 
 func _ready() -> void:
-	multiplayer.connection_failed.connect(_connection_failed)
-	multiplayer.server_disconnected.connect(_server_disconnected)
-	multiplayer.connected_to_server.connect(_connected_to_server)
-	
-	add_child(client_connection_timeout)
-	client_connection_timeout.wait_time = 10
-	client_connection_timeout.one_shot = true
-	
-	client_connection_timeout.timeout.connect(_on_client_connection_timeout)
-	
-	ip_address = IP.get_local_addresses()[3]
-	
-	for ip in IP.get_local_addresses():
-		if ip.begins_with("192.168.") and not ip.ends_with(".1"):
-			ip_address = ip
-			break
+	multiplayer.peer_connected.connect(_on_client_connected)
+	multiplayer.peer_disconnected.connect(_on_client_disconnected)
+	multiplayer.connected_to_server.connect(_on_connected)
+	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	pass
+
+func create_client(ip : String) -> void:
+	peer = ENetMultiplayerPeer.new()
+	peer.create_client(ip, DEFAULT_PORT)
+	multiplayer.multiplayer_peer = peer
 	pass
 
 func create_server() -> void:
-	server = ENetMultiplayerPeer.new()
-	server.create_server(DEFAULT_PORT, MAX_CLIENTS)
+	peer = ENetMultiplayerPeer.new()
+	peer.create_server(DEFAULT_PORT, MAX_CLIENTS)
+	multiplayer.multiplayer_peer = peer
 	
-	multiplayer.multiplayer_peer = server
+	clients[1] = local_data
+	client_connected.emit(1, local_data)
 	pass
 
-func join_server() -> void:
-	client = ENetMultiplayerPeer.new()
-	client.create_client(ip_address, DEFAULT_PORT)
-	
-	multiplayer.multiplayer_peer = client
-	client_connection_timeout.start()
+@rpc("any_peer", "call_local", "reliable")
+func client_loaded():
+	if multiplayer.is_server():
+		clients_loaded += 1
+		if clients_loaded == clients.size():
+			# call to start
+			clients_loaded = 0
 	pass
 
-func reset_network_connection() -> void:
-	if multiplayer.has_multiplayer_peer():
-		multiplayer.multiplayer_peer = null
+@rpc("any_peer", "reliable")
+func register_client(new_info : Dictionary) -> void:
+	var new_client_id : int = multiplayer.get_remote_sender_id()
+	clients[new_client_id] = new_info
+	client_connected.emit(new_client_id, new_info)
 	pass
 
-func _connected_to_server() -> void:
-	print("Successfully connected to the server")
-	is_client_connected_to_server = true
+func _on_client_connected(id):
+	register_client.rpc_id(id, local_data)
 	pass
 
-func _server_disconnected() -> void:
-	print("Disconnected from the server")
-	
-	# delete nodes in group net
-	
-	reset_network_connection()
+func _on_client_disconnected(id):
+	var nick = clients[id]["name"]
+	clients.erase(id)
+	client_disconnected.emit(id, nick)
 	pass
 
-func _on_client_connection_timeout() -> void:
-	if not is_client_connected_to_server:
-		print("Client has been timed out")
-		reset_network_connection()
+
+func _on_connected() -> void:
+	var id : int = multiplayer.get_unique_id()
+	clients[id] = local_data
+	client_connected.emit(id, local_data)
 	pass
 
-func _connection_failed() -> void:
-	# delete nodes in group net
-	
-	reset_network_connection()
+func _on_connection_failed() -> void:
+	multiplayer.multiplayer_peer = null
+	pass
+
+func _on_server_disconnected() -> void:
+	multiplayer.multiplayer_peer = null
+	clients.clear()
+	server_disconnected.emit()
 	pass
